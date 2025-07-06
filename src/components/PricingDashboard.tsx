@@ -94,7 +94,7 @@ export default function PricingDashboard() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-semibold mb-6">📊 Product Pricing Dashboard</h1>
+      <h1 className="text-3xl font-semibold mb-6">T&T Pricing Dashboard</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <Select onValueChange={setProduct} defaultValue={product}>
