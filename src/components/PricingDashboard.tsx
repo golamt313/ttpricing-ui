@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -18,9 +11,15 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 
-// Types
 interface PricingRow {
   vendor: string
   size: string
@@ -41,6 +40,7 @@ interface RawPricingRow {
   price: number
 }
 
+
 export default function PricingDashboard() {
   const [data, setData] = useState<PricingRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -48,29 +48,25 @@ export default function PricingDashboard() {
   const [vendor, setVendor] = useState('')
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState('')
-  const [debouncedVendor, setDebouncedVendor] = useState('')
-  const [debouncedSize, setDebouncedSize] = useState('')
-  const [debouncedQuantity, setDebouncedQuantity] = useState('')
 
-  // Debounce input values
+  const [vendorOptions, setVendorOptions] = useState<string[]>([])
+  const [sizeOptions, setSizeOptions] = useState<string[]>([])
+  const [quantityOptions, setQuantityOptions] = useState<string[]>([])
+
+  // Load filter options on mount
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedVendor(vendor)
-      setDebouncedSize(size)
-      setDebouncedQuantity(quantity)
-    }, 400)
-    return () => clearTimeout(timeout)
-  }, [vendor, size, quantity])
+    fetch('/api/pricing/options')
+      .then(res => res.json())
+      .then(({ vendors, sizes, quantities }) => {
+        setVendorOptions(vendors)
+        setSizeOptions(sizes)
+        setQuantityOptions(quantities.map((q: number) => q.toString()))
+      })
+  }, [])
 
-  // Fetch data
+  // Fetch pricing data
   useEffect(() => {
-    const params = new URLSearchParams({
-      product,
-      vendor: debouncedVendor,
-      size: debouncedSize,
-      quantity: debouncedQuantity
-    })
-
+    const params = new URLSearchParams({ product, vendor, size, quantity })
     setLoading(true)
     fetch(`/api/pricing?${params.toString()}`)
       .then(res => res.json())
@@ -90,7 +86,7 @@ export default function PricingDashboard() {
         setData(normalized)
       })
       .finally(() => setLoading(false))
-  }, [product, debouncedVendor, debouncedSize, debouncedQuantity])
+  }, [product, vendor, size, quantity])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -107,9 +103,24 @@ export default function PricingDashboard() {
           </SelectContent>
         </Select>
 
-        <Input placeholder="Vendor" value={vendor} onChange={e => setVendor(e.target.value)} />
-        <Input placeholder="Size (e.g. 4x6)" value={size} onChange={e => setSize(e.target.value)} />
-        <Input placeholder="Quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />
+        <Combobox
+          options={vendorOptions}
+          placeholder="Vendor"
+          onValueChange={setVendor}
+        />
+
+        <Combobox
+          options={sizeOptions}
+          placeholder="Size (e.g. 4x6)"
+          onValueChange={setSize}
+        />
+
+        <Combobox
+          options={quantityOptions}
+          placeholder="Quantity"
+          onValueChange={setQuantity}
+        />
+
       </div>
 
       <Card>
