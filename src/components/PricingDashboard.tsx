@@ -18,19 +18,10 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
-// Define the structure of a pricing result row
-type RawPricingRow = {
-  vendors?: { name: string }
-  size: string
-  quantity: number
-  coating: string | null
-  weight: string | null
-  sides: string | null
-  price: number
-}
-
-type PricingRow = {
+// Types
+interface PricingRow {
   vendor: string
   size: string
   quantity: number
@@ -40,28 +31,53 @@ type PricingRow = {
   price: number
 }
 
+interface RawPricingRow {
+  vendors?: { name: string }
+  size: string
+  quantity: number
+  coating: string | null
+  weight: string | null
+  sides: string | null
+  price: number
+}
 
 export default function PricingDashboard() {
   const [data, setData] = useState<PricingRow[]>([])
+  const [loading, setLoading] = useState(false)
   const [product, setProduct] = useState('Postcard')
   const [vendor, setVendor] = useState('')
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [debouncedVendor, setDebouncedVendor] = useState('')
+  const [debouncedSize, setDebouncedSize] = useState('')
+  const [debouncedQuantity, setDebouncedQuantity] = useState('')
 
+  // Debounce input values
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedVendor(vendor)
+      setDebouncedSize(size)
+      setDebouncedQuantity(quantity)
+    }, 400)
+    return () => clearTimeout(timeout)
+  }, [vendor, size, quantity])
+
+  // Fetch data
   useEffect(() => {
     const params = new URLSearchParams({
       product,
-      vendor,
-      size,
-      quantity
+      vendor: debouncedVendor,
+      size: debouncedSize,
+      quantity: debouncedQuantity
     })
 
+    setLoading(true)
     fetch(`/api/pricing?${params.toString()}`)
       .then(res => res.json())
       .then((raw: unknown) => {
         if (!Array.isArray(raw)) return
 
-        const normalized = (raw as RawPricingRow[]).map((row): PricingRow => ({
+        const normalized = (raw as RawPricingRow[]).map(row => ({
           vendor: row.vendors?.name ?? '—',
           size: row.size,
           quantity: row.quantity,
@@ -73,7 +89,8 @@ export default function PricingDashboard() {
 
         setData(normalized)
       })
-  }, [product, vendor, size, quantity])
+      .finally(() => setLoading(false))
+  }, [product, debouncedVendor, debouncedSize, debouncedQuantity])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -97,32 +114,42 @@ export default function PricingDashboard() {
 
       <Card>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Coating</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Sides</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell>{row.vendor}</TableCell>
-                  <TableCell>{row.size}</TableCell>
-                  <TableCell>{row.quantity}</TableCell>
-                  <TableCell>{row.coating || '—'}</TableCell>
-                  <TableCell>{row.weight || '—'}</TableCell>
-                  <TableCell>{row.sides || '—'}</TableCell>
-                  <TableCell className="text-right">${row.price.toFixed(2)}</TableCell>
-                </TableRow>
+          {loading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : data.length === 0 ? (
+            <p className="text-center text-muted-foreground py-6">No results found</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Coating</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Sides</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{row.vendor}</TableCell>
+                    <TableCell>{row.size}</TableCell>
+                    <TableCell>{row.quantity}</TableCell>
+                    <TableCell>{row.coating || '—'}</TableCell>
+                    <TableCell>{row.weight || '—'}</TableCell>
+                    <TableCell>{row.sides || '—'}</TableCell>
+                    <TableCell className="text-right">${row.price.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
