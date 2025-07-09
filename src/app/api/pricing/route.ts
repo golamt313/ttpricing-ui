@@ -6,6 +6,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+const productMap: Record<string, number> = {
+  Postcard: 21,
+  'Business Card': 5,
+  Flyer: 99, // etc.
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const product = searchParams.get('product') || ''
@@ -13,7 +19,7 @@ export async function GET(req: Request) {
   const size = searchParams.get('size') || ''
   const quantity = searchParams.get('quantity') || ''
 
-  const query = supabase
+  let query = supabase
     .from('daily_prices')
     .select(`
       price, size, quantity, coating, weight, sides,
@@ -21,10 +27,23 @@ export async function GET(req: Request) {
     `)
     .order('price', { ascending: true })
 
-  if (product) query.eq('product_id', 1) // You can customize this logic
-  if (vendor) query.ilike('vendors.name', `%${vendor}%`)
-  if (size) query.ilike('size', `%${size}%`)
-  if (quantity) query.eq('quantity', Number(quantity))
+  if (product && productMap[product]) query = query.eq('product_id', productMap[product])
+  if (size) query = query.ilike('size', `%${size}%`)
+  if (quantity) query = query.eq('quantity', Number(quantity))
+
+  // Get vendor_id for the vendor name (if vendor selected)
+  if (vendor) {
+    // Get vendor_id by name
+    const { data: vendorsData } = await supabase
+      .from('vendors')
+      .select('id')
+      .ilike('name', `%${vendor}%`)
+      .limit(1)
+      .single()
+    if (vendorsData?.id) {
+      query = query.eq('vendor_id', vendorsData.id)
+    }
+  }
 
   const { data, error } = await query
 
