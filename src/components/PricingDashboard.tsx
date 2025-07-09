@@ -27,6 +27,7 @@ interface PricingRow {
   coating: string | null
   weight: string | null
   sides: string | null
+  turnaround_desc: string | null
   price: number
 }
 
@@ -37,9 +38,9 @@ interface RawPricingRow {
   coating: string | null
   weight: string | null
   sides: string | null
+  turnaround_desc: string | null
   price: number
 }
-
 
 export default function PricingDashboard() {
   const [data, setData] = useState<PricingRow[]>([])
@@ -48,25 +49,28 @@ export default function PricingDashboard() {
   const [vendor, setVendor] = useState('')
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [turnaround, setTurnaround] = useState('')
 
   const [vendorOptions, setVendorOptions] = useState<string[]>([])
   const [sizeOptions, setSizeOptions] = useState<string[]>([])
   const [quantityOptions, setQuantityOptions] = useState<string[]>([])
+  const [turnaroundOptions, setTurnaroundOptions] = useState<string[]>([])
 
   // Load filter options on mount
   useEffect(() => {
     fetch('/api/pricing/options')
       .then(res => res.json())
-      .then(({ vendors, sizes, quantities }) => {
+      .then(({ vendors, sizes, quantities, turnaroundOptions }) => {
         setVendorOptions(vendors)
         setSizeOptions(sizes)
         setQuantityOptions(quantities.map((q: number) => q.toString()))
+        setTurnaroundOptions(turnaroundOptions)
       })
   }, [])
 
   // Fetch pricing data
   useEffect(() => {
-    const params = new URLSearchParams({ product, vendor, size, quantity })
+    const params = new URLSearchParams({ product, vendor, size, quantity, turnaround })
     setLoading(true)
     fetch(`/api/pricing?${params.toString()}`)
       .then(res => res.json())
@@ -80,19 +84,20 @@ export default function PricingDashboard() {
           coating: row.coating,
           weight: row.weight,
           sides: row.sides,
+          turnaround_desc: row.turnaround_desc,
           price: row.price
         }))
 
         setData(normalized)
       })
       .finally(() => setLoading(false))
-  }, [product, vendor, size, quantity])
+  }, [product, vendor, size, quantity, turnaround])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-semibold mb-6">T&T Pricing Dashboard</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <Select onValueChange={setProduct} defaultValue={product}>
           <SelectTrigger>
             <SelectValue placeholder="Select product" />
@@ -100,6 +105,7 @@ export default function PricingDashboard() {
           <SelectContent>
             <SelectItem value="Postcard">Postcard</SelectItem>
             <SelectItem value="Flyer">Flyer</SelectItem>
+            {/* Add more products as needed */}
           </SelectContent>
         </Select>
 
@@ -121,6 +127,11 @@ export default function PricingDashboard() {
           onValueChange={setQuantity}
         />
 
+        <Combobox
+          options={turnaroundOptions}
+          placeholder="Turnaround"
+          onValueChange={setTurnaround}
+        />
       </div>
 
       <Card>
@@ -143,6 +154,7 @@ export default function PricingDashboard() {
                   <TableHead>Coating</TableHead>
                   <TableHead>Weight</TableHead>
                   <TableHead>Sides</TableHead>
+                  <TableHead>Turnaround</TableHead>
                   <TableHead className="text-right">Price</TableHead>
                 </TableRow>
               </TableHeader>
@@ -155,7 +167,8 @@ export default function PricingDashboard() {
                     <TableCell>{row.coating || '—'}</TableCell>
                     <TableCell>{row.weight || '—'}</TableCell>
                     <TableCell>{row.sides || '—'}</TableCell>
-                    <TableCell className="text-right">${row.price.toFixed(2)}</TableCell>
+                    <TableCell>{row.turnaround_desc || '—'}</TableCell>
+                    <TableCell className="text-right">${row.price?.toFixed(2) ?? '—'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
