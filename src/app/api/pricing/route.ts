@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     .from('daily_prices')
     .select(`
       price, size, quantity, coating, weight, sides,
-      turnaround_desc
+      turnaround_desc, vendors ( name )
     `)
     .order('price', { ascending: true })
 
